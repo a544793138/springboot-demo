@@ -1,7 +1,8 @@
 package com.github.demo.configuration;
 
-import java.util.Arrays;
-
+import com.github.demo.filter.OptionsRequestFilter;
+import com.github.demo.service.JwtAuthenticationProvider;
+import com.github.demo.service.JwtUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -19,9 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import com.github.demo.filter.OptionsRequestFilter;
-import com.github.demo.service.JwtAuthenticationProvider;
-import com.github.demo.service.JwtUserService;
+import java.util.Arrays;
 
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter{

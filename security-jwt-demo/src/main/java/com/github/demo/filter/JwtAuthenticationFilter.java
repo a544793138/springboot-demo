@@ -1,14 +1,8 @@
 package com.github.demo.filter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.github.demo.configuration.JwtAuthenticationToken;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -26,21 +20,30 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.github.demo.configuration.JwtAuthenticationToken;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * 带 Token 请求的校验流程。这个 filter 是拦截除 /login 和 /logout 外的请求的。
+ * 主要做的是提取请求 header 中的 token，并交给 {@link AuthenticationManager} 做 token 的校验
+ */
 public class JwtAuthenticationFilter extends OncePerRequestFilter{
 	
-	private RequestMatcher requiresAuthenticationRequestMatcher;
+	private final RequestMatcher requiresAuthenticationRequestMatcher;
+	// 不拦截 / 放行的请求 URL
 	private List<RequestMatcher> permissiveRequestMatchers;
 	private AuthenticationManager authenticationManager;
 	
-
 	private AuthenticationSuccessHandler successHandler = new SavedRequestAwareAuthenticationSuccessHandler();
 	private AuthenticationFailureHandler failureHandler = new SimpleUrlAuthenticationFailureHandler();
 
 	public JwtAuthenticationFilter() {
+		// 拦截 header 中带有 Authorization 的请求
 		this.requiresAuthenticationRequestMatcher = new RequestHeaderRequestMatcher("Authorization");
 	}
 	
@@ -59,6 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+
+		// header 没有带 token 的，直接放行，因为部分 url 匿名用户也可以访问
+		// 如果不支持匿名用户的请求不带 token，这里放行也没有问题，因为 SecurityContext 中没有认证信息，后面会被权限控制模块拦截
 		if (!requiresAuthentication(request, response)) {
 			filterChain.doFilter(request, response);
 			return;
@@ -66,6 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
 		Authentication authResult = null;
 		AuthenticationException failed = null;
 		try {
+			// 从投中获取 token 并封装后交给 AuthenticationManager
 			String token = getJwtToken(request);
 			if(StringUtils.isNotBlank(token)) {
 				JwtAuthenticationToken authToken = new JwtAuthenticationToken(JWT.decode(token));				
